@@ -70,10 +70,14 @@ public class DishController {
 
     // --- MÉTODOS DE ATUALIZAÇÃO E DELEÇÃO ---
 
-    @PutMapping("/{id}")
-    public ResponseEntity<DishDTO> updateDish(@PathVariable Long id, @RequestBody DishDTO dishDTO) {
-        Dish updated = dishService.update(id, dishDTO);
-        return ResponseEntity.ok(DishDTO.fromModel(updated));
+    @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
+    public ResponseEntity<DishDTO> updateDish(
+            @PathVariable Long id,
+            @ModelAttribute DishDTO dishDTO,
+            @RequestParam(value = "file", required = false) MultipartFile file
+    ) {
+        Dish updatedDish = dishService.update(id, dishDTO, file);
+        return ResponseEntity.ok(DishDTO.fromModel(updatedDish));
     }
 
     @DeleteMapping("/{id}")

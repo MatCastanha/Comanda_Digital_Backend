@@ -6,6 +6,7 @@ import com.ibeus.Comanda.Digital.repository.DishRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -68,21 +69,53 @@ public class DishService {
 
     // --- Atualização ---
 
-    public Dish update(Long id, DishDTO dishDTO) {
-        Dish existingDish = findById(id); // Garante que existe antes de atualizar
+    // --- Atualização Unificada (Novo Método) 🔄 ---
+    /**
+     * Atualiza o prato e a imagem opcionalmente.
+     * @param id ID do prato.
+     * @param dishDTO Dados textuais do prato.
+     * @param file Novo arquivo de imagem (opcional).
+     * @return O prato atualizado.
+     */
+    @Transactional // Garante que tudo seja revertido se o upload falhar
+    public Dish update(Long id, DishDTO dishDTO, MultipartFile file) {
+        Dish existingDish = findById(id); // 1. Garante que o prato existe
 
-        // Atualiza campos
-        existingDish.setName(dishDTO.getName());
-        existingDish.setPrice(dishDTO.getPrice());
-        existingDish.setCategory(dishDTO.getCategory());
-        existingDish.setDescription(dishDTO.getDescription());
+        try {
+            // 2. Atualiza campos textuais
+            existingDish.setName(dishDTO.getName());
+            existingDish.setPrice(dishDTO.getPrice());
+            existingDish.setCategory(dishDTO.getCategory());
+            existingDish.setDescription(dishDTO.getDescription());
 
-        // Só atualiza a imagem se uma nova URL for passada (útil para updates sem upload)
-        if (dishDTO.getUrlImage() != null) {
-            existingDish.setUrlImage(dishDTO.getUrlImage());
+            // 3. Lógica de Atualização/Substituição da Imagem
+            if (file != null && !file.isEmpty()) {
+
+                // Opcional: Adicione a lógica para DELETAR a imagem antiga do storage aqui
+                // if (existingDish.getUrlImage() != null && !existingDish.getUrlImage().isEmpty()) {
+                //     storageService.delete(existingDish.getUrlImage());
+                // }
+
+                // Faz o upload do NOVO arquivo e obtém a URL
+                String newImageUrl = storageService.store(file);
+
+                // Atualiza a URL no prato
+                existingDish.setUrlImage(newImageUrl);
+
+            } else if (dishDTO.getUrlImage() != null && dishDTO.getUrlImage().isEmpty()) {
+                // Caso especial: O front-end enviou explicitamente a URL vazia para remover a imagem
+                existingDish.setUrlImage(null);
+                // Opcional: Lógica para deletar a imagem do storage (se existir)
+            }
+            // Se 'file' for nulo e 'dishDTO.getUrlImage()' for igual ao valor antigo, nada muda.
+
+            // 4. Salva o prato com todas as alterações
+            return dishRepository.save(existingDish);
+
+        } catch (Exception e) {
+            // Captura erros (ex: falha no upload) e devolve um 400 Bad Request
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Erro ao atualizar prato ou imagem", e);
         }
-
-        return dishRepository.save(existingDish);
     }
 
     // --- Deleção ---

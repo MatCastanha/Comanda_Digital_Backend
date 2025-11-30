@@ -1,4 +1,4 @@
-package com.ibeus.Comanda.Digital.dto;
+        package com.ibeus.Comanda.Digital.dto;
 
 import lombok.Data;
 import com.ibeus.Comanda.Digital.model.Client;
@@ -9,7 +9,7 @@ import com.ibeus.Comanda.Digital.model.Address;
 public class ClientDTO {
 
     private Long id;
-    private Long cpf; // Note: Na prática, CPF não deveria ser gerado, mas é o seu @Id atual
+    private String cpf;
     private String name;
     private String midName;
     private AddressDTO address; // O Address também deve ser DTO neste nível
@@ -40,8 +40,6 @@ public class ClientDTO {
         } else {
             dto.setAddress(null);
         }
-
-        // dto.setPayment(client.getPayment()); // Se 'payment' estiver na Entity e você quiser expor
 
         return dto;
     }

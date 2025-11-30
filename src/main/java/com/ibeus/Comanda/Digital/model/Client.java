@@ -14,7 +14,7 @@ public class Client {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long cpf;
+    private String cpf;
     private String name;
     private String midName;
 
