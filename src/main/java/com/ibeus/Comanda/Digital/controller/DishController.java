@@ -52,6 +52,14 @@ public class DishController {
         return ResponseEntity.ok(list);
     }
 
+    @GetMapping("/favorites")
+    public ResponseEntity<List<DishDTO>> getFavoriteDishes() {
+        List<DishDTO> list = dishService.findByFavorites().stream()
+                .map(DishDTO::fromModel)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(list);
+    }
+
     // --- MÉTODO DE CRIAÇÃO UNIFICADO (POST) ---
 
     // consumes = "multipart/form-data" permite envio de arquivos + texto
@@ -77,6 +85,12 @@ public class DishController {
             @RequestParam(value = "file", required = false) MultipartFile file
     ) {
         Dish updatedDish = dishService.update(id, dishDTO, file);
+        return ResponseEntity.ok(DishDTO.fromModel(updatedDish));
+    }
+
+    @PatchMapping("/{id}/favorite")
+    public ResponseEntity<DishDTO> toggleFavorite(@PathVariable Long id) {
+        Dish updatedDish = dishService.toggleFavorite(id);
         return ResponseEntity.ok(DishDTO.fromModel(updatedDish));
     }
 
