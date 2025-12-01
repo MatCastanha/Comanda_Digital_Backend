@@ -16,6 +16,7 @@ public class DishDTO {
     private String category;
     private String description;
     private Double price;
+    private Boolean favorite;
 
     public static DishDTO fromModel(Dish dish) {
         if (dish == null) return null; // Segurança contra NullPointerException
@@ -26,6 +27,7 @@ public class DishDTO {
         dto.setCategory(dish.getCategory());
         dto.setDescription(dish.getDescription());
         dto.setPrice(dish.getPrice());
+        dto.setFavorite(dish.isFavorite());
         return dto;
     }
 
@@ -37,6 +39,7 @@ public class DishDTO {
         dish.setCategory(this.category);
         dish.setDescription(this.description);
         dish.setPrice(this.price);
+        dish.setFavorite(this.favorite != null ? this.favorite : false);
         return dish;
     }
 }

@@ -212,6 +212,22 @@ public class OrderService {
         Order order = repository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Pedido não encontrado: " + id));
 
+        OrderStatus currentStatus = order.getStatus();
+
+        // 1. Regra: Bloqueia qualquer alteração se o pedido já foi ENTREGUE.
+        if (currentStatus == OrderStatus.DELIVERED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Pedido já foi entregue e não pode ter seu status alterado.");
+        }
+        
+        // 2. Regra: Bloquear retrocesso a partir de ON_THE_WAY.
+        // Se o status atual for ON_THE_WAY, o novo status só pode ser DELIVERED ou CANCELLED.
+        if (currentStatus == OrderStatus.ON_THE_WAY) {
+            if (newStatus.ordinal() < currentStatus.ordinal() && newStatus != OrderStatus.CANCELLED) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
+                    "Não é possível retroceder o status de 'A Caminho' para fases anteriores (PENDING, PREPARING).");
+            }
+        }
+        
         order.setStatus(newStatus);
         Order updated = repository.save(order);
 
@@ -228,7 +244,8 @@ public class OrderService {
             case DRAFT -> order.setStatus(OrderStatus.RECEIVED); // Permite pular direto do DRAFT
             case RECEIVED -> order.setStatus(OrderStatus.IN_PREPARATION);
             case IN_PREPARATION -> order.setStatus(OrderStatus.READY);
-            case READY -> order.setStatus(OrderStatus.DELIVERED);
+            case READY -> order.setStatus(OrderStatus.ON_THE_WAY);
+            case ON_THE_WAY -> order.setStatus(OrderStatus.DELIVERED);
             case DELIVERED -> throw new IllegalStateException("Pedido já foi entregue!");
         }
 
@@ -243,7 +260,8 @@ public class OrderService {
                 .orElseThrow(() -> new EntityNotFoundException("Pedido não encontrado"));
 
         switch (order.getStatus()) {
-            case DELIVERED -> order.setStatus(OrderStatus.READY);
+            case DELIVERED -> throw new IllegalStateException("Pedido já foi entregue!");
+            case ON_THE_WAY -> throw new IllegalStateException("Pedido está a caminho e não pode ser revertido!");
             case READY -> order.setStatus(OrderStatus.IN_PREPARATION);
             case IN_PREPARATION -> order.setStatus(OrderStatus.RECEIVED);
             case RECEIVED -> order.setStatus(OrderStatus.DRAFT); // Permite voltar para o DRAFT

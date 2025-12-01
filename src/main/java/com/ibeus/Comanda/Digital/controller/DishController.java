@@ -1,9 +1,9 @@
 package com.ibeus.Comanda.Digital.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ibeus.Comanda.Digital.dto.DishDTO;
 import com.ibeus.Comanda.Digital.model.Dish;
 import com.ibeus.Comanda.Digital.service.DishService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -52,6 +52,14 @@ public class DishController {
         return ResponseEntity.ok(list);
     }
 
+    @GetMapping("/favorites")
+    public ResponseEntity<List<DishDTO>> findFavorites() {
+        List<DishDTO> list = dishService.findFavorites().stream()
+                .map(DishDTO::fromModel)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(list);
+    }
+
     // --- MÉTODO DE CRIAÇÃO UNIFICADO (POST) ---
 
     // consumes = "multipart/form-data" permite envio de arquivos + texto
@@ -71,13 +79,19 @@ public class DishController {
     // --- MÉTODOS DE ATUALIZAÇÃO E DELEÇÃO ---
 
     @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
-    public ResponseEntity<DishDTO> updateDish(
+    public ResponseEntity<DishDTO> update(
             @PathVariable Long id,
-            @ModelAttribute DishDTO dishDTO,
-            @RequestParam(value = "file", required = false) MultipartFile file
-    ) {
-        Dish updatedDish = dishService.update(id, dishDTO, file);
-        return ResponseEntity.ok(DishDTO.fromModel(updatedDish));
+            @RequestPart("dish") @Valid DishDTO dto, // DTO (geralmente JSON) via request part
+            @RequestPart(value = "file", required = false) MultipartFile file) { // Arquivo é opcional
+
+        DishDTO updated = dishService.update(id, dto, file);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PatchMapping("/{id}/favorite")
+    public ResponseEntity<DishDTO> toggleFavorite(@PathVariable Long id) {
+        DishDTO updated = DishDTO.fromModel(dishService.toggleFavorite(id));
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")

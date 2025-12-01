@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
-
 import java.util.List;
 
 @Service
@@ -33,6 +32,10 @@ public class DishService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Prato não encontrado: " + id));
     }
 
+    public List<Dish> findFavorites(){
+        return dishRepository.findByFavoriteTrue();
+    }
+
     public List<Dish> findByName(String name) {
         return dishRepository.findByNameContainingIgnoreCase(name);
     }
@@ -43,6 +46,16 @@ public class DishService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Nenhum prato nesta categoria: " + category);
         }
         return dishes;
+    }
+
+    @Transactional
+    public Dish toggleFavorite(Long id) {
+        Dish existingDish = findById(id);
+        
+        // Inverte o valor booleano atual
+        existingDish.setFavorite(!existingDish.isFavorite());
+        
+        return dishRepository.save(existingDish);
     }
 
     // --- Criação Unificada (Lógica Principal) ---
@@ -77,46 +90,72 @@ public class DishService {
      * @param file Novo arquivo de imagem (opcional).
      * @return O prato atualizado.
      */
-    @Transactional // Garante que tudo seja revertido se o upload falhar
-    public Dish update(Long id, DishDTO dishDTO, MultipartFile file) {
-        Dish existingDish = findById(id); // 1. Garante que o prato existe
+    /**
+     * 💡 NOVO MÉTODO DE ATUALIZAÇÃO CORRIGIDO:
+     * Lida com MultipartFile (Upload) OU String (URL direta) OU remoção.
+     */
+    @Transactional
+    public DishDTO update(Long id, DishDTO dto, MultipartFile file) {
+        Dish existingDish = dishRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Prato não encontrado: " + id));
 
         try {
-            // 2. Atualiza campos textuais
-            existingDish.setName(dishDTO.getName());
-            existingDish.setPrice(dishDTO.getPrice());
-            existingDish.setCategory(dishDTO.getCategory());
-            existingDish.setDescription(dishDTO.getDescription());
+            // 1. Atualiza campos textuais e preço (excluindo 'favorite')
 
-            // 3. Lógica de Atualização/Substituição da Imagem
+            // Atualiza campos não nulos do DTO
+            if (dto.getName() != null) existingDish.setName(dto.getName());
+            if (dto.getCategory() != null) existingDish.setCategory(dto.getCategory());
+            if (dto.getDescription() != null) existingDish.setDescription(dto.getDescription());
+            // ⚠️ LINHA REMOVIDA: Não atualiza existingDish.setFavorite(dto.getFavorite());
+
+            String oldUrlImage = existingDish.getUrlImage();
+            String newUrlImageFromDto = dto.getUrlImage();
+            boolean imageUpdated = false;
+
+            // 2. Lógica de Atualização/Substituição da Imagem
             if (file != null && !file.isEmpty()) {
+                // Caso A: Novo arquivo foi enviado (Prioridade máxima)
 
-                // Opcional: Adicione a lógica para DELETAR a imagem antiga do storage aqui
-                // if (existingDish.getUrlImage() != null && !existingDish.getUrlImage().isEmpty()) {
-                //     storageService.delete(existingDish.getUrlImage());
-                // }
+                // [Lógica opcional para DELETAR a imagem antiga do storage aqui]
 
                 // Faz o upload do NOVO arquivo e obtém a URL
-                String newImageUrl = storageService.store(file);
+                String uploadedUrl = storageService.store(file);
+                existingDish.setUrlImage(uploadedUrl);
+                imageUpdated = true;
 
-                // Atualiza a URL no prato
-                existingDish.setUrlImage(newImageUrl);
-
-            } else if (dishDTO.getUrlImage() != null && dishDTO.getUrlImage().isEmpty()) {
-                // Caso especial: O front-end enviou explicitamente a URL vazia para remover a imagem
-                existingDish.setUrlImage(null);
-                // Opcional: Lógica para deletar a imagem do storage (se existir)
             }
-            // Se 'file' for nulo e 'dishDTO.getUrlImage()' for igual ao valor antigo, nada muda.
+
+            // 3. Verifica se houve alteração APENAS na URL do DTO (link externo ou remoção)
+            if (!imageUpdated) {
+
+                if (newUrlImageFromDto != null && !newUrlImageFromDto.equals(oldUrlImage)) {
+                    // Caso B: Nova URL externa OU alteração da URL.
+
+                    // [Lógica opcional para DELETAR o arquivo antigo do storage aqui, se for um arquivo próprio]
+
+                    // Salva a nova URL (pode ser um link externo ou string vazia/null para remover)
+                    existingDish.setUrlImage(newUrlImageFromDto.isEmpty() ? null : newUrlImageFromDto);
+
+                } else if ((newUrlImageFromDto == null || newUrlImageFromDto.isEmpty()) && oldUrlImage != null) {
+                    // Caso C: Remoção explícita (DTO enviou null/vazio, mas o DB tinha um link)
+
+                    // [Lógica opcional para DELETAR o arquivo antigo do storage aqui]
+
+                    existingDish.setUrlImage(null);
+                }
+            }
+            // Se nenhum dos casos acima for verdadeiro, existingDish.imageUrl permanece o mesmo.
 
             // 4. Salva o prato com todas as alterações
-            return dishRepository.save(existingDish);
+            Dish saved = dishRepository.save(existingDish);
+            return DishDTO.fromModel(saved);
 
         } catch (Exception e) {
             // Captura erros (ex: falha no upload) e devolve um 400 Bad Request
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Erro ao atualizar prato ou imagem", e);
         }
     }
+
 
     // --- Deleção ---
 
