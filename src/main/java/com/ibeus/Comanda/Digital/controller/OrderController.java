@@ -15,39 +15,44 @@ import java.util.List;
 @CrossOrigin(origins = "http://localhost:4200")
 public class OrderController {
 
-    private final OrderService service;
+    private final OrderService orderService;
 
-    public OrderController(OrderService service) {
-        this.service = service;
+    public OrderController(OrderService orderService) {
+        this.orderService = orderService;
     }
 
     // --- MÉTODOS GET ---
     @GetMapping
     public ResponseEntity<List<OrderDTO>> findAll() {
-        List<OrderDTO> list = service.findAll();
+        List<OrderDTO> list = orderService.findAll();
         return ResponseEntity.ok(list);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<OrderDTO> findById(@PathVariable Long id) {
-        OrderDTO dto = service.findById(id);
+        OrderDTO dto = orderService.findById(id);
         return ResponseEntity.ok(dto);
     }
 
     @GetMapping("/status/{status}")
     public ResponseEntity<List<OrderDTO>> findByStatus(@PathVariable OrderStatus status) {
-        List<OrderDTO> list = service.findByStatus(status);
+        List<OrderDTO> list = orderService.findByStatus(status);
         return ResponseEntity.ok(list);
     }
 
-
+    // Busca o histórico de pedidos finalizados
+    @GetMapping("/history")
+    public ResponseEntity<List<OrderDTO>> getOrderHistory() {
+        List<OrderDTO> list = orderService.findHistory();
+        return ResponseEntity.ok(list);
+    }
 
     // --- MÉTODOS DE ESCRITA (FLUXO DO CARRINHO) ---
 
     // 1. Cria o rascunho (DRAFT) vinculado ao Cliente Único
     @PostMapping
     public ResponseEntity<OrderDTO> create(@RequestBody OrderDTO dto) {
-        OrderDTO created = service.create(dto);
+        OrderDTO created = orderService.create(dto);
         return ResponseEntity.ok(created);
     }
 
@@ -57,7 +62,7 @@ public class OrderController {
             @PathVariable Long orderId,
             @RequestBody OrderItemInputDTO itemDTO) {
 
-        OrderItemDTO addedItem = service.addItemToOrder(orderId, itemDTO);
+        OrderItemDTO addedItem = orderService.addItemToOrder(orderId, itemDTO);
         return ResponseEntity.ok(addedItem);
     }
 
@@ -68,14 +73,14 @@ public class OrderController {
             @PathVariable Long orderId,
             @RequestBody OrderItemInputDTO itemDTO) {
 
-        OrderDTO updatedOrder = service.removeItemFromOrder(orderId, itemDTO);
+        OrderDTO updatedOrder = orderService.removeItemFromOrder(orderId, itemDTO);
         return ResponseEntity.ok(updatedOrder);
     }
 
     // 3. Finaliza o Pedido (Muda de DRAFT para RECEIVED)
     @PostMapping("/{orderId}/finalize")
     public ResponseEntity<OrderDTO> finalizeOrder(@PathVariable Long orderId) {
-        OrderDTO finalizedOrder = service.finalizeOrder(orderId);
+        OrderDTO finalizedOrder = orderService.finalizeOrder(orderId);
         return ResponseEntity.ok(finalizedOrder);
     }
 
@@ -87,19 +92,19 @@ public class OrderController {
             @PathVariable Long id,
             @RequestParam OrderStatus status) {
 
-        OrderDTO updatedOrder = service.updateStatus(id, status);
+        OrderDTO updatedOrder = orderService.updateStatus(id, status);
         return ResponseEntity.ok(updatedOrder);
     }
 
     // Avançar etapa
     @PostMapping("/{id}/next")
     public ResponseEntity<OrderDTO> nextStep(@PathVariable Long id) {
-        return ResponseEntity.ok(service.nextStep(id));
+        return ResponseEntity.ok(orderService.nextStep(id));
     }
 
     // Voltar etapa
     @PostMapping("/{id}/previous")
     public ResponseEntity<OrderDTO> previousStep(@PathVariable Long id) {
-        return ResponseEntity.ok(service.previousStep(id));
+        return ResponseEntity.ok(orderService.previousStep(id));
     }
 }

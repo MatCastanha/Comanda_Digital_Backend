@@ -6,6 +6,6 @@ public enum OrderStatus {
     IN_PREPARATION,  // 3. Cozinha aceitou e está fazendo
     READY,           // 4. Pronto para retirada/entrega
     ON_THE_WAY,      // 5. Saiu para entrega/retirada
-    DELIVERED,        // 6. Finalizado
-    CANCELLED        // Pedido cancelado
+    DELIVERED,       // 6. Finalizado
+    CANCELED         // 7. Pedido cancelado
 }

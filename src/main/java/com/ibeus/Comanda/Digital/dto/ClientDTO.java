@@ -2,8 +2,6 @@
 
 import lombok.Data;
 import com.ibeus.Comanda.Digital.model.Client;
-// Adicione o import da Entity de Endereço se você precisar usar a Entity dentro deste DTO
-import com.ibeus.Comanda.Digital.model.Address;
 
 @Data
 public class ClientDTO {

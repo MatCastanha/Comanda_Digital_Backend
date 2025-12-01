@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -45,6 +46,27 @@ public class OrderService {
         Order order = repository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido não encontrado: " + id));
         return new OrderDTO(order);
+    }
+
+    /**
+     * Busca todos os pedidos que atingiram o status final (DELIVERED OU CANCELED).
+     * 💡 CORREÇÃO: Inclui CANCELED no histórico.
+     */
+    @Transactional(readOnly = true)
+    public List<OrderDTO> findHistory() {
+        // Define a lista de status que representam o fim do ciclo (Histórico/Arquivo Morto)
+        List<OrderStatus> finalStatuses = Arrays.asList(
+                OrderStatus.DELIVERED,
+                OrderStatus.CANCELED
+        );
+
+        List<Order> entities = repository.findByStatusIn(finalStatuses);
+
+        if (entities.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Nenhum pedido finalizado ou cancelado encontrado.");
+        }
+
+        return entities.stream().map(OrderDTO::new).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -222,7 +244,7 @@ public class OrderService {
         // 2. Regra: Bloquear retrocesso a partir de ON_THE_WAY.
         // Se o status atual for ON_THE_WAY, o novo status só pode ser DELIVERED ou CANCELLED.
         if (currentStatus == OrderStatus.ON_THE_WAY) {
-            if (newStatus.ordinal() < currentStatus.ordinal() && newStatus != OrderStatus.CANCELLED) {
+            if (newStatus.ordinal() < currentStatus.ordinal() && newStatus != OrderStatus.CANCELED) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
                     "Não é possível retroceder o status de 'A Caminho' para fases anteriores (PENDING, PREPARING).");
             }
