@@ -228,6 +228,42 @@ public class OrderService {
         return new OrderDTO(updated);
     }
 
+    /**
+     * 🆕 Cancela um pedido, alterando seu status para CANCELED.
+     * Permite o cancelamento para pedidos de RECEIVED a ON_THE_WAY.
+     * @param id O ID do pedido a ser cancelado.
+     * @return O DTO do pedido atualizado.
+     */
+    @Transactional
+    public OrderDTO cancelOrder(Long id) {
+        Order order = repository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Pedido não encontrado: " + id));
+
+        OrderStatus currentStatus = order.getStatus();
+
+        // 1. Bloquear RASCUNHO (DRAFT). O usuário deve remover itens se for rascunho.
+        if (currentStatus == OrderStatus.DRAFT) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Pedidos no status DRAFT não podem ser cancelados. Remova os itens para limpar o rascunho.");
+        }
+
+        // 2. Bloquear pedidos já ENTREGUES (DELIVERED).
+        if (currentStatus == OrderStatus.DELIVERED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Pedido já foi entregue e não pode ser cancelado.");
+        }
+
+        // 3. Se já estiver cancelado, não faz nada (opcional).
+        if (currentStatus == OrderStatus.CANCELED) {
+            return new OrderDTO(order);
+        }
+
+        // 4. Se o status for: RECEIVED, IN_PREPARATION, READY ou ON_THE_WAY, ele será cancelado.
+        order.setStatus(OrderStatus.CANCELED);
+        Order updated = repository.save(order);
+
+        return new OrderDTO(updated);
+    }
+
     // 🔹 Atualiza para um status específico (Drag & Drop)
     @Transactional
     public OrderDTO updateStatus(Long id, OrderStatus newStatus) {
