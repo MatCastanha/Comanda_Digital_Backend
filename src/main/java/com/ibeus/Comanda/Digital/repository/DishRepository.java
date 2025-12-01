@@ -8,6 +8,5 @@ public interface DishRepository extends JpaRepository<Dish, Long> {
 
     List<Dish> findByNameContainingIgnoreCase(String name);
     List<Dish> findByCategoryIgnoreCase(String category);
-    List<Dish> findByFavoriteTrue();
 
 }

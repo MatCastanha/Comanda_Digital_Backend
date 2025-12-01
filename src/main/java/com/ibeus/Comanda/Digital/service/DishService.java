@@ -33,10 +33,6 @@ public class DishService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Prato não encontrado: " + id));
     }
 
-    public List<Dish> findByFavorites() {
-        return dishRepository.findByFavoriteTrue();
-    }
-
     public List<Dish> findByName(String name) {
         return dishRepository.findByNameContainingIgnoreCase(name);
     }
@@ -47,16 +43,6 @@ public class DishService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Nenhum prato nesta categoria: " + category);
         }
         return dishes;
-    }
-
-    @Transactional
-    public Dish toggleFavorite(Long id) {
-        Dish existingDish = findById(id);
-        
-        // Inverte o valor booleano atual
-        existingDish.setFavorite(!existingDish.isFavorite()); 
-        
-        return dishRepository.save(existingDish);
     }
 
     // --- Criação Unificada (Lógica Principal) ---

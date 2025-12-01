@@ -21,7 +21,7 @@ public class OrderController {
         this.service = service;
     }
 
-    // --- MÉTODOS DE BUSCA GERAL (Mantidos) ---
+    // --- MÉTODOS GET ---
     @GetMapping
     public ResponseEntity<List<OrderDTO>> findAll() {
         List<OrderDTO> list = service.findAll();
@@ -40,19 +40,18 @@ public class OrderController {
         return ResponseEntity.ok(list);
     }
 
-    @GetMapping("/history")
-    public ResponseEntity<List<OrderDTO>> getOrderHistory() {
-        List<OrderDTO> list = service.findHistory();
-        return ResponseEntity.ok(list);
-    }
 
-    // --- MÉTODOS DE ESCRITA (FLUXO DO CARRINHO - Mantidos) ---
+
+    // --- MÉTODOS DE ESCRITA (FLUXO DO CARRINHO) ---
+
+    // 1. Cria o rascunho (DRAFT) vinculado ao Cliente Único
     @PostMapping
     public ResponseEntity<OrderDTO> create(@RequestBody OrderDTO dto) {
         OrderDTO created = service.create(dto);
         return ResponseEntity.ok(created);
     }
 
+    // 2. Adiciona/Atualiza Item ao Rascunho (Carrinho)
     @PostMapping("/{orderId}/items")
     public ResponseEntity<OrderItemDTO> addItem(
             @PathVariable Long orderId,
@@ -62,6 +61,8 @@ public class OrderController {
         return ResponseEntity.ok(addedItem);
     }
 
+    // --- 🔹 REMOVER OU DIMINUIR ITEM (PATCH) 🔄 ---
+    // PATCH é mais adequado, pois pode ser uma diminuição (atualização parcial) ou remoção.
     @PatchMapping("/{orderId}/items/remove")
     public ResponseEntity<OrderDTO> removeItem(
             @PathVariable Long orderId,
@@ -71,13 +72,16 @@ public class OrderController {
         return ResponseEntity.ok(updatedOrder);
     }
 
+    // 3. Finaliza o Pedido (Muda de DRAFT para RECEIVED)
     @PostMapping("/{orderId}/finalize")
     public ResponseEntity<OrderDTO> finalizeOrder(@PathVariable Long orderId) {
         OrderDTO finalizedOrder = service.finalizeOrder(orderId);
         return ResponseEntity.ok(finalizedOrder);
     }
 
-    // --- MÉTODOS DE ADMINISTRAÇÃO / GERAIS (Mantidos) ---
+    // --- MÉTODOS DE MUDANÇA DE STATUS ---
+
+    // Atualizar para um status específico (Ex: Drag & Drop)
     @PatchMapping("/{id}/status")
     public ResponseEntity<OrderDTO> updateStatus(
             @PathVariable Long id,
@@ -86,6 +90,16 @@ public class OrderController {
         OrderDTO updatedOrder = service.updateStatus(id, status);
         return ResponseEntity.ok(updatedOrder);
     }
-    
-    // 🛑 Os endpoints /next e /previous foram removidos.
+
+    // Avançar etapa
+    @PostMapping("/{id}/next")
+    public ResponseEntity<OrderDTO> nextStep(@PathVariable Long id) {
+        return ResponseEntity.ok(service.nextStep(id));
+    }
+
+    // Voltar etapa
+    @PostMapping("/{id}/previous")
+    public ResponseEntity<OrderDTO> previousStep(@PathVariable Long id) {
+        return ResponseEntity.ok(service.previousStep(id));
+    }
 }

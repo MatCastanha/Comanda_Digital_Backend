@@ -13,10 +13,13 @@ public class Dish {
     private Long id;
 
     private String urlImage;
+
     private String name;
+
     private String category;
+
     private String description;
+
     private Double price;
-    private boolean favorite = false;
 
 }
