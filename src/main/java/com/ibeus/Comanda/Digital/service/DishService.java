@@ -106,6 +106,7 @@ public class DishService {
             if (dto.getName() != null) existingDish.setName(dto.getName());
             if (dto.getCategory() != null) existingDish.setCategory(dto.getCategory());
             if (dto.getDescription() != null) existingDish.setDescription(dto.getDescription());
+            if (dto.getPrice() != null) existingDish.setPrice(dto.getPrice());
             // ⚠️ LINHA REMOVIDA: Não atualiza existingDish.setFavorite(dto.getFavorite());
 
             String oldUrlImage = existingDish.getUrlImage();
